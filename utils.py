@@ -1,6 +1,5 @@
 import psycopg2
 import requests
-import json
 
 
 def get_vacancies(vacancies):
@@ -19,25 +18,13 @@ def get_vacancies(vacancies):
             vacancies_name = item['name']
             salary_from = 0 if salary is None or salary['from'] is None else salary['from']
             salary_to = 0 if salary is None or salary['to'] is None else salary['to']
-            # if item['salary']['from'] is not None:
-            #     salary_from = item['salary']['from']
-            # elif salary is not None:
-            #     salary_from = salary
-            # else:
-            #     salary_from = 0
-            # if salary['to'] is not None:
-            #     salary_to = salary['to']
-            # elif salary is not None:
-            #     salary_to = salary
-            # else:
-            #     salary_to = 0
             requirement = item['snippet']['requirement']
             vacancies_url = item['alternate_url']
             employer_id = item['employer']['id']
 
             vacancies_data.append([vacancy_id, vacancies_name, salary_from,
                                    salary_to, requirement, vacancies_url, employer_id])
-        return vacancies_data
+    return vacancies_data
 
 
 def get_employer(employers_id):
@@ -48,12 +35,14 @@ def get_employer(employers_id):
 
     for employer_id in employers_id:
         params = {
-            'per_page': 10
+            'per_page': 10,
+            'open_vacancies': True
         }
-        url = f"https://api.hh.ru/employers/{employer_id}"
-        data_vacancies = requests.get(url, params=params).json()
-        data.append(data_vacancies)
-        for item in data:
+        url = f"https://api.hh.ru/employers?employer_id={employer_id}"
+        data_vacancies = requests.get(url, params=params).json()['items']
+        # data.append(data_vacancies)
+        for item in data_vacancies:
+
             employer_id = item['id']
             company_name = item['name']
             open_vacancies = item['open_vacancies']
@@ -62,8 +51,10 @@ def get_employer(employers_id):
 
 
 def create_table(database_name, params):
-    """Создание БД, сохранение в таблице"""
+    """Создание БД, созданение таблиц"""
+
     with psycopg2.connect(db_name=database_name, **params) as conn:
+        conn.autocommit = True
         with conn.cursor() as cur:
             cur.execute(f"DROP database IF EXISTS {database_name}")
             cur.execute(f"CREATE database {database_name}")
@@ -76,8 +67,8 @@ def create_table(database_name, params):
 
             cur.execute("""
                         CREATE TABLE vacancies (
-                        vacancy_id int PRIMARY KEY,
-                        vacancies_name varchar,
+                        vacancy_id INTEGER PRIMARY KEY,
+                        vacancies_name varchar(255),
                         salary INTEGER,
                         salary_from INTEGER,
                         salary_to INTEGER,
@@ -85,6 +76,8 @@ def create_table(database_name, params):
                         vacancies_url TEXT,
                         employer_id INTEGER REFERENCES employers(employer_id),
                         )""")
+        conn.commit()
+        conn.close()
 
 def save_employers_to_db(data, database_name, params):
     """Заполнение базы данных компании"""
@@ -96,6 +89,7 @@ def save_employers_to_db(data, database_name, params):
                         'VALUES (%s, %s, %s)'
                 cur.execute(query, employer)
         conn.commit()
+        conn.close()
 
 def save_vacancies_to_db(data, database_name, params):
     """Заполнение базы данных вакансии"""
@@ -108,9 +102,6 @@ def save_vacancies_to_db(data, database_name, params):
                         'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
                 cur.execute(query, vacancy)
         conn.commit()
+        conn.close()
 
-#
-#
-# dbmanager = DBManager()
-# print(dbmanager.get_companies_and_vacancies_count(15))
-print(create_table('cw5'))
+# print(get_employer([10]))

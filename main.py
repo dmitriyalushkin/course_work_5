@@ -5,9 +5,11 @@ from db_manager import DBManager
 def main():
     params = config()
     dbmanager = DBManager()
+    employer_data = get_employer([10])
+    vacancies_data = get_vacancies([10])
     create_table('postgres', params)
-    save_vacancies_to_db('postgres', params)
-    save_employers_to_db('postgres', params)
+    save_vacancies_to_db(vacancies_data, 'postgres', params)
+    save_employers_to_db(employer_data, 'postgres', params)
 
     while True:
 
