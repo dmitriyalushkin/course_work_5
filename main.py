@@ -1,16 +1,14 @@
-from utils import create_table, save_vacancies_to_db, save_employers_to_db, get_employer, get_vacancies
-from config import config
+from utils import create_table, add_to_table
+
 from db_manager import DBManager
+
 
 def main():
     employers_list = [1740, 15478, 8620, 3529, 78638, 4006, 4504679, 561525, 64174, 8642172]
-    params = config()
     dbmanager = DBManager()
-    employer_data = get_employer(employers_list)
-    vacancies_data = get_vacancies(employers_list)
     create_table()
-    save_vacancies_to_db(vacancies_data)
-    save_employers_to_db(employer_data)
+    add_to_table(employers_list)
+
 
     while True:
 

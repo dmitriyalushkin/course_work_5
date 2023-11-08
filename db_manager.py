@@ -1,10 +1,8 @@
 import psycopg2
-from config import config
 
 
 class DBManager:
     '''Класс для подключения к БД'''
-
 
     def get_companies_and_vacancies_count(self):
         '''Метод получает список всех компаний и
@@ -18,9 +16,8 @@ class DBManager:
                             f"JOIN vacancies USING (employer_id) "
                             f"GROUP BY employers.company_name")
                 result = cur.fetchall()
-                print(result)
             conn.commit()
-
+        return result
 
 
     def get_all_vacancies(self):
@@ -30,7 +27,7 @@ class DBManager:
                             user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SELECT employers.company_name, vacancies.vacancies_name, "
-                            f"vacancies.salary_from, vacancies_url "
+                            f"vacancies.payment, vacancies_url "
                             f"FROM employers "
                             f"JOIN vacancies USING (employer_id)")
                 result = cur.fetchall()
@@ -43,7 +40,7 @@ class DBManager:
         with psycopg2.connect(host="localhost", database="course_work_5",
                             user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SELECT AVG(salary_from) as avg_salary FROM vacancies ")
+                cur.execute(f"SELECT AVG(payment) as avg_payment FROM vacancies ")
                 result = cur.fetchall()
             conn.commit()
         return result
@@ -56,7 +53,7 @@ class DBManager:
                             user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SELECT * FROM vacancies "
-                            f"WHERE salary_from > (SELECT AVG(salary_from) FROM vacancies) ")
+                            f"WHERE payment > (SELECT AVG(payment) FROM vacancies) ")
                 result = cur.fetchall()
             conn.commit()
         return result
@@ -69,12 +66,12 @@ class DBManager:
                             user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SELECT * FROM vacancies "
-                            f"WHERE vacancies_name LIKE('%{keyword}%') ")
+                            f"WHERE lower(vacancies_name) LIKE '%{keyword}%' "
+                            f"OR lower(vacancies_name) LIKE '%{keyword}'"
+                            f"OR lower(vacancies_name) LIKE '{keyword}%';")
                 result = cur.fetchall()
             conn.commit()
         return result
 
 
 
-# dbmanager = DBManager()
-# print(dbmanager.get_companies_and_vacancies_count(15))

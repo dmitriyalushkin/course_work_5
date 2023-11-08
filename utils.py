@@ -1,57 +1,46 @@
 import psycopg2
 import requests
-from config import config
 
 
-def get_vacancies(employers_id):
+def get_vacancies(employer_id):
     """Получение данных вакансий по API"""
 
+    params = {
+        'area': 1,
+        'page': 0,
+        'per_page': 10
+    }
+    url = f"https://api.hh.ru/vacancies?employer_id={employer_id}"
+    data_vacancies = requests.get(url, params=params).json()
+
     vacancies_data = []
-    for employer_id in employers_id:
-        params = {
-            'per_page': 10
+    for item in data_vacancies["items"]:
+        hh_vacancies = {
+            'vacancy_id': int(item['id']),
+            'vacancies_name': item['name'],
+            'payment': item["salary"]["from"] if item["salary"] else None,
+            'requirement': item['snippet']['requirement'],
+            'vacancies_url': item['alternate_url'],
+            'employer_id': employer_id
         }
-        url = f"https://api.hh.ru/vacancies?employer_id={employer_id}"
-        data_vacancies = requests.get(url, params=params).json()
-        data_vacancies = data_vacancies.get('items')
-        if data_vacancies:
+        if hh_vacancies['payment'] is not None:
+            vacancies_data.append(hh_vacancies)
 
-            for item in data_vacancies:
-                # salary = item['salary']
-                vacancy_id = item['id']
-                vacancies_name = item['name']
-                salary_from = 0 if item['salary'] is None or item['salary']['from'] is None else item['salary']['from']
-                salary_to = 0 if item['salary'] is None or item['salary']['to'] is None else item['salary']['to']
-                requirement = item['snippet']['requirement']
-                vacancies_url = item['alternate_url']
-                employer_id = item['employer']['id']
-
-                vacancies_data.append([vacancy_id, vacancies_name, salary_from,
-                                       salary_to, requirement, vacancies_url, employer_id])
-    return vacancies_data
+        return vacancies_data
 
 
-def get_employer(employers_id):
+def get_employer(employer_id):
     """Получение данных о работодателей  по API"""
 
-    employer_data = []
-    data = []
-
-    for employer_id in employers_id:
-        params = {
-            'per_page': 10,
-            'open_vacancies': True
+    url = f"https://api.hh.ru/employers/{employer_id}"
+    data_vacancies = requests.get(url).json()
+    hh_company = {
+        "employer_id": int(employer_id),
+        "company_name": data_vacancies['name'],
+        "open_vacancies": data_vacancies['open_vacancies']
         }
-        url = f"https://api.hh.ru/employers/{employer_id}"
-        data_vacancies = requests.get(url, params=params).json()
-        # data.append(data_vacancies)
-        # for item in data_vacancies:
 
-        employer_id = data_vacancies['id']
-        company_name = data_vacancies['name']
-        open_vacancies = data_vacancies['vacancies_url']
-        employer_data.append([employer_id, company_name, open_vacancies])
-    return employer_data
+    return hh_company
 
 
 def create_table():
@@ -72,7 +61,7 @@ def create_table():
     with conn.cursor() as cur:
         cur.execute("""
                     CREATE TABLE employers (
-                    employer_id SERIAL PRIMARY KEY,
+                    employer_id INTEGER PRIMARY KEY,
                     company_name varchar(255),
                     open_vacancies INTEGER
                     )""")
@@ -81,8 +70,7 @@ def create_table():
                     CREATE TABLE vacancies (
                     vacancy_id SERIAL PRIMARY KEY,
                     vacancies_name varchar(255),
-                    salary_from INTEGER,
-                    salary_to INTEGER,
+                    payment INTEGER,
                     requirement TEXT,
                     vacancies_url TEXT,
                     employer_id INTEGER REFERENCES employers(employer_id)
@@ -91,40 +79,31 @@ def create_table():
     conn.close()
 
 
-def save_employers_to_db(employers_list):
-    """Заполнение базы данных компании"""
+def add_to_table(employers_list):
+    """Заполнение базы данных компании и вакансии"""
 
     with psycopg2.connect(host="localhost", database="course_work_5",
-                            user="postgres", password="12345") as conn:
+                          user="postgres", password="12345") as conn:
         with conn.cursor() as cur:
-            # cur.execute(f'TRUNCATE TABLE employers, vacancies RESTART IDENTITY;')
+            cur.execute('TRUNCATE TABLE employers, vacancies RESTART IDENTITY;')
+
             for employer in employers_list:
                 employer_list = get_employer(employer)
                 cur.execute('INSERT INTO employers (employer_id, company_name, open_vacancies) '
-                            'VALUES (%s, %s, %s)', (employer_list[0],
-                            employer_list[1], employer_list[2]))
+                            'VALUES (%s, %s, %s) RETURNING employer_id',
+                            (employer_list['employer_id'], employer_list['company_name'],
+                             employer_list['open_vacancies']))
 
-        conn.commit()
-
-
-
-def save_vacancies_to_db(employers_list):
-    """Заполнение базы данных вакансии"""
-
-    with psycopg2.connect(host="localhost", database="course_work_5",
-                            user="postgres", password="12345") as conn:
-        with conn.cursor() as cur:
-            # cur.execute(f'TRUNCATE TABLE employers, vacancies RESTART IDENTITY;')
             for employer in employers_list:
                 vacancy_list = get_vacancies(employer)
                 for v in vacancy_list:
                     cur.execute('INSERT INTO vacancies (vacancy_id, vacancies_name, '
-                    'salary_from, salary_to, requirement, '
-                    'vacancies_url, employer_id) '
-                    'VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                    (v[0], v[1], v[2], v[3], v[4], v[5], v[6]))
+                                'payment, requirement, vacancies_url, employer_id) '
+                                'VALUES (%s, %s, %s, %s, %s, %s)',
+                                (v['vacancy_id'], v['vacancies_name'], v['payment'],
+                                 v['requirement'], v['vacancies_url'], v['employer_id']))
 
         conn.commit()
 
 
-# print(save_employers_to_db([1740, 15478, 8620, 3529, 78638, 4006, 4504679, 561525, 64174, 8642172, 3785152, 4934, 205152, 3776, 4394]))
+
