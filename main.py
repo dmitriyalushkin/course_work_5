@@ -3,13 +3,14 @@ from config import config
 from db_manager import DBManager
 
 def main():
+    employers_list = [1740, 15478, 8620, 3529, 78638, 4006, 4504679, 561525, 64174, 8642172]
     params = config()
     dbmanager = DBManager()
-    employer_data = get_employer([10])
-    vacancies_data = get_vacancies([10])
-    create_table('postgres', params)
-    save_vacancies_to_db(vacancies_data, 'postgres', params)
-    save_employers_to_db(employer_data, 'postgres', params)
+    employer_data = get_employer(employers_list)
+    vacancies_data = get_vacancies(employers_list)
+    create_table()
+    save_vacancies_to_db(vacancies_data)
+    save_employers_to_db(employer_data)
 
     while True:
 

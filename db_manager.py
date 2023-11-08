@@ -10,67 +10,69 @@ class DBManager:
         '''Метод получает список всех компаний и
         количество вакансий у каждой компании'''
 
-        with psycopg2.connect(**config()) as conn:
+        with psycopg2.connect(host="localhost", database="course_work_5",
+                            user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SELECT company_name FROM employees count(vacancies.*) "
-                        f"JOIN vacancies USING (employer_id) "
-                        f"GROUP BY employees.company_name")
-            result = cur.fetchall()
-        conn.commit()
-        conn.close()
-        return result
+                cur.execute(f"SELECT company_name, COUNT(vacancies_name) AS count_vacancies  "
+                            f"FROM employers "
+                            f"JOIN vacancies USING (employer_id) "
+                            f"GROUP BY employers.company_name")
+                result = cur.fetchall()
+                print(result)
+            conn.commit()
+
 
 
     def get_all_vacancies(self):
         '''Метод получает список всех вакансий с указанием названия компании,
         названия вакансии и зарплаты и ссылки на вакансию'''
-        with psycopg2.connect(**config()) as conn:
+        with psycopg2.connect(host="localhost", database="course_work_5",
+                            user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SELECT employees.company_name, vacancies.vacancies_name, "
-                            f"vacancies.salary, vacancies_url"
-                            f"FROM employees"
+                cur.execute(f"SELECT employers.company_name, vacancies.vacancies_name, "
+                            f"vacancies.salary_from, vacancies_url "
+                            f"FROM employers "
                             f"JOIN vacancies USING (employer_id)")
                 result = cur.fetchall()
             conn.commit()
-            conn.close()
-            return result
+        return result
 
 
     def get_avg_salary(self):
         '''Метод получает среднюю зарплату по вакансиям'''
-        with psycopg2.connect(**config()) as conn:
+        with psycopg2.connect(host="localhost", database="course_work_5",
+                            user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SELECT AVG(salary) as avg_salary FROM vacancies ")
+                cur.execute(f"SELECT AVG(salary_from) as avg_salary FROM vacancies ")
                 result = cur.fetchall()
             conn.commit()
-            conn.close()
-            return result
+        return result
 
 
     def get_vacancies_with_higher_salary(self):
         '''Метод получает список всех вакансий,
         у которых зарплата выше средней по всем вакансиям'''
-        with psycopg2.connect(**config()) as conn:
+        with psycopg2.connect(host="localhost", database="course_work_5",
+                            user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SELECT * FROM vacancies "
-                            f"WHERE salary > (SELECT AVG(salary) FROM vacancies) ")
+                            f"WHERE salary_from > (SELECT AVG(salary_from) FROM vacancies) ")
                 result = cur.fetchall()
             conn.commit()
-            conn.close()
-            return result
+        return result
 
 
     def get_vacancies_with_keyword(self, keyword):
         '''Метод получает список всех вакансий,
         в названии которых содержатся переданные в метод слова'''
-        with psycopg2.connect(**config()) as conn:
+        with psycopg2.connect(host="localhost", database="course_work_5",
+                            user="postgres", password="12345") as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SELECT * FROM vacancies "
                             f"WHERE vacancies_name LIKE('%{keyword}%') ")
                 result = cur.fetchall()
             conn.commit()
-            conn.close()
-            return result
+        return result
 
 
 
